@@ -1,0 +1,19 @@
+<div class="col-4">
+   <form action="{{ url_for('admin.process_send_message', user_id=user_id, next=request.full_path) }}" method="POST">
+       {{ send_message_form.hidden_tag() }}
+       <fieldset>
+           <legend>Отправить сообщение</legend>
+           <div class="form-group row">
+               {{ send_message_form.message.label(class_="col-sm-2 col-form-label") }}
+               <div class="col-sm-4">
+               {{ send_message_form.message(class_="form-control", rows='10') }}
+               </div>
+           </div>
+
+
+
+           {{ send_message_form.submit(class_='btn btn-primary') }}
+       </fieldset>
+   </form>
+       
+</div>

@@ -1,0 +1,75 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="panel panel-default">
+
+   <div class="panel-heading">
+ 		<h3 class="panel-title">Panel title</h3>
+	</div>
+
+
+    <div class="panel-body">
+
+
+{#
+<div class="table-responsive">
+    <table class="table table-striped table-bordered table-hover model-list">
+        <thead>
+            <tr>
+                    <th>
+                    	Всего пользователей
+                    </th>
+                    <th>
+                    	Всего инвесторов
+                    </th>
+                    <th>
+                    	Всего партнёров
+                    </th>
+                    <th>
+                    	Новых пользователей за сегодня 
+                    </th>
+                    <th>
+                    	Общая сумма инвестированных средств
+                    </th>
+                    <th>
+                    	Сумма средств на аккаунтах пользователей
+                    </th>
+                    <th>
+                    	Доступно к выводу
+                    </th>
+            </tr>
+        </thead>
+        
+        <tr>
+                <td>
+                	{{ all_subscribers }}
+                </td>
+                <td>
+                	{{ all_investors }}
+                </td>
+                <td>
+                	{{ all_partners }}
+                </td>
+                <td>
+                	{{ today_subs }}
+                </td>
+                <td>
+                	{{ all_invest_summ }}
+                </td>
+                <td>
+                	{{ all_accounts_summ }}
+                </td>
+                <td>
+                	{{ available_for_withdrawal }}
+                </td>
+        </tr>
+        
+    </table>
+</div>
+#}
+
+
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+services:
+  nats:
+    image: nats:latest
+    entrypoint: /nats-server
+    command: "-c /config/server.conf"
+    restart: always
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats_data:/data
+      - ./services/config/nats:/config
+
+  nats-nui:
+    image: ghcr.io/nats-nui/nui:latest
+    container_name: nats-nui
+    restart: always
+    ports:
+      - "31311:31311"  # Порт для доступа к NATS NUI
+    volumes:
+      - nui_db:/db
+    depends_on:
+      - nats
+
+  bot:
+    &bot
+    build:
+      context: ./services/bot
+      dockerfile: Dockerfile.prod
+    command: python main.py
+    restart: always
+    logging:
+      driver: local
+    volumes:
+      - ./services/bot/:/usr/src/bot/
+      - ./services/common:/home/bot/bot/common
+      - static_volume:/home/webapp/web/static
+    env_file:
+      - ./.env.prod
+    environment:
+      - SERVICE=bot
+    depends_on:
+      - db
+
+  web:
+    build:
+      context: ./services/web
+      dockerfile: Dockerfile.prod
+    command: gunicorn --worker-class gevent --workers 1 --bind 0.0.0.0:5000 --timeout 30 manage:app
+    restart: always
+    logging:
+      driver: local
+    volumes:
+      - static_volume:/home/webapp/web/static
+      - media_volume:/home/webapp/web/media
+      - ./services/common:/home/webapp/web/common
+    expose:
+      - 5000
+    env_file:
+      - ./.env.prod
+    environment:
+      - SERVICE=web
+    depends_on:
+      - db
+
+  nginx:
+    build: ./services/nginx
+    volumes:
+      - static_volume:/home/webapp/web/static
+      - media_volume:/home/webapp/web/media
+    restart: always
+    ports:
+      - 1337:80
+    depends_on:
+      - web
+
+  taskiq-worker:
+    <<: *bot
+    entrypoint: []
+    command: [taskiq, worker, -fsd, modules.tasks.broker:broker]
+    depends_on:
+      - nats
+
+  taskiq-scheduler:
+    <<: *bot
+    entrypoint: []
+    command: [taskiq, scheduler, -fsd, modules.tasks.scheduler:scheduler]
+    depends_on:
+      - nats
+
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data/
+    env_file:
+      - ./.env.prod.db
+    restart: always
+
+volumes:
+  postgres_data_prod:
+  static_volume:
+  media_volume:
+  nats_data:
+  nui_db:

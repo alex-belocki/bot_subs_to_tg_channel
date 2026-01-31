@@ -1,0 +1,8 @@
+<form class="icon" method="POST" action="{{ url_for('admin.copy_row') }}">
+    {{ form.csrf_token }}
+    <input id="id" name="id" required="" type="hidden" value="{{ row.id }}">
+    <input id="endpoint" name="endpoint" required="" type="hidden" value="{{ admin_view.endpoint }}">
+    <button onclick="" title="Copy record">
+        <span class="fa glyphicon glyphicon-copy"></span>
+    </button>
+</form>

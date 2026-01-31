@@ -1,0 +1,82 @@
+<h3>Статистика</h3>
+<div class="table-responsive">
+    <table class="table table-striped table-bordered table-hover model-list">
+        <thead>
+            <tr>
+                    <th>
+                    	Всего пополнений баланса
+                    </th>
+                    <th>
+                    	Чистый доход
+                    </th>
+                    <th>
+                    	Реинвестировано
+                    </th>
+                    <th>
+                    	Всего партнёров:
+                    </th>
+                    <th>
+                        1 уровня
+                    </th>
+                    <th>
+                        2 уровня
+                    </th>
+                    <th>
+                        3 уровня
+                    </th>
+                    <th>
+                        Пополнения баланса партнёрами
+                    </th>
+                    <th>
+                        Заработано по ПП
+                    </th>
+                    <th>
+                        Всего выводов
+                    </th>
+
+
+
+            </tr>
+        </thead>
+        
+
+        <tr>
+                <td>
+                    {{ balance_top_up_amount }}
+                </td>
+                <td>
+                    {{ net_income }}
+                </td>
+                <td>
+                    {{ reinvest_summ }}
+                </td>
+                <td>
+                    {{ all_partners_count }}
+                </td>
+                <td>
+                    {{ p_level_1 }}
+                </td>
+                <td>
+                    {{ p_level_2 }}
+                </td>
+                <td>
+                    {{ p_level_3 }}
+                </td>
+                <td>
+                    {{ summ_p_all }}
+                </td>
+                <td>
+                    {{ partners_income }}
+                </td>
+                <td>
+                    {{ partners_withraws }}
+                </td>
+
+        </tr>
+
+
+
+
+
+    </table>
+</div>

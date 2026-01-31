@@ -1,0 +1,94 @@
+services:
+  nats:
+    image: nats:latest
+    entrypoint: /nats-server
+    command: "-c /config/server.conf"
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats_data:/data
+      - ./services/config/nats:/config
+
+  nats-nui:
+    image: ghcr.io/nats-nui/nui:latest
+    container_name: nats-nui
+    ports:
+      - "31311:31311"  # Порт для доступа к NATS NUI
+    volumes:
+      - nui_db:/db
+    depends_on:
+      - nats
+
+  bot:
+    &bot
+    build:
+      context: ./services/bot
+      dockerfile: Dockerfile
+    volumes:
+      - ./services/bot/:/usr/src/bot/
+      - ./services/common:/usr/src/bot/common
+      - ..:/workspaces:cached
+      - static_volume:/usr/src/webapp/static
+      - vscode-extensions:/root/.vscode-server/extensions
+      - cursor-extensions:/root/.cursor-server/extensions
+    logging:
+      driver: local
+    env_file:
+      - ./.env.dev
+    environment:
+      - SERVICE=bot
+    depends_on:
+      - db
+
+  web:
+    build: ./services/web
+    # command: python manage.py run -h 0.0.0.0
+    restart: always
+    logging:
+      driver: local
+    volumes:
+      - ./services/web/:/usr/src/webapp/
+      - ./services/web/static/css/:/usr/src/webapp/static/css/
+      - ./services/web/static/js/:/usr/src/webapp/static/js/
+      - ./services/common:/usr/src/webapp/common
+      - ./services/:/workspaces:cached
+      - static_volume:/usr/src/webapp/static
+    ports:
+      - 5000:5000
+    env_file:
+      - ./.env.dev
+    environment:
+      - SERVICE=web
+    depends_on:
+      - db
+
+  taskiq-worker:
+    <<: *bot
+    entrypoint: []
+    command: [taskiq, worker, -fsd, modules.tasks.broker:broker, --reload]
+    depends_on:
+      - nats
+
+  taskiq-scheduler:
+    <<: *bot
+    entrypoint: []
+    command: [taskiq, scheduler, -fsd, modules.tasks.scheduler:scheduler]
+    depends_on:
+      - nats
+
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=bot_subs_to_tg_channel
+      - POSTGRES_PASSWORD=1111
+      - POSTGRES_DB=bot_subs_to_tg_channel
+volumes:
+  postgres_data:
+  static_volume:
+  vscode-extensions:
+  cursor-extensions:
+  nats_data:
+  nui_db:

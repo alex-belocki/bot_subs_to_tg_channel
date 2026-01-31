@@ -1,0 +1,18 @@
+{% if admin_view.name == 'Одобренные' %}
+<li class="active">
+{% else %}
+<li>
+{% endif %}
+    <a href="{{ url_for('approved.index_view') }}" title="Одобренные">Одобренные
+    </a>
+</li>
+
+{% if admin_view.name == 'Отклонённые' %}
+<li class="active">
+{% else %}
+<li>
+{% endif %}
+    <a href="{{ url_for('declined.index_view') }}" title="Отклонённые">Отклонённые
+    </a>
+</li>
+

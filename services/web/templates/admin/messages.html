@@ -1,0 +1,88 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+<div class="panel panel-default">
+    <div class="panel-body">
+
+        <div class="col-4">
+            <form action="{{ url_for('send-messages.process_fake_withdraws') }}" method="POST">
+                {{ form.hidden_tag() }}
+                <fieldset>
+                    <legend>Фейковые выводы</legend>
+                    <div class="form-group row">
+                        {{ form.pm_wallet.label(class_="col-sm-2 col-form-label") }}
+                        <div class="col-sm-4">
+                        {{ form.pm_wallet(class_="form-control") }}
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        {{ form.summ.label(class_="col-sm-2 col-form-label") }}
+                        <div class="col-sm-4">
+                        {{ form.summ(class_="form-control") }}
+                        </div>
+                    </div>
+                    {{ form.submit(class_='btn btn-primary') }}
+                </fieldset>
+            </form>
+                
+        </div>
+
+    <hr>
+
+
+
+
+
+        <div class="col-4">
+            <form action="{{ url_for('send-messages.process_send_message') }}" method="POST">
+                {{ form.hidden_tag() }}
+                <fieldset>
+                    <legend>Отправить сообщение</legend>
+                    <div class="form-group row">
+                        {{ send_message_form.message.label(class_="col-sm-2 col-form-label") }}
+                        <div class="col-sm-4">
+                        {{ send_message_form.message(class_="form-control", rows='10') }}
+                        </div>
+                    </div>
+
+                        <fieldset class="form-group">
+                            <div class="row">
+                                <legend class="col-form-label col-sm-2 pt-0">Сегмент</legend>
+                                <div class="col-sm-10">
+                                    <div class="form-check">
+                                    {{ send_message_form.segment.label(class_="form-check-label") }}
+
+                                    {{ send_message_form.segment(class_="form-check-input", style = 'border:0px; list-style-type: none') }}
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+
+
+                    {{ form.submit(class_='btn btn-primary') }}
+                </fieldset>
+            </form>
+                
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+{#  #}
+
+    </div>
+
+</div>
+{% endblock %}
+
+

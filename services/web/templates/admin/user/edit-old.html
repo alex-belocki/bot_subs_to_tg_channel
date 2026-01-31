@@ -1,0 +1,33 @@
+{% extends 'admin/model/edit.html' %}
+
+{% block body %}
+	{% block navlinks %}{{ super() }}{% endblock %}
+	{% block edit_form %} {{ super() }} {% endblock %}
+
+<hr>
+
+	<ul class="nav nav-tabs" role="tablist" id="bottom-tabs">
+	  <li role="presentation" class="active"><a href="#history" data-toggle="tab" aria-controls="history">История</a></li>
+	  <li role="presentation"><a href="#send-message" data-toggle="tab" aria-controls="send-message">Написать</a></li>
+	  <li role="presentation"><a href="#partners" data-toggle="tab" aria-controls="partners">Партнёры</a></li>
+	</ul>
+
+
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane active" id="history">
+      {% include 'admin/user/history.html' %}
+    </div>
+    <div role="tabpanel" class="tab-pane" id="send-message">
+      {% include 'admin/user/send-message.html' %}
+    </div>
+    <div role="tabpanel" class="tab-pane" id="partners">
+      {% include 'admin/user/partners.html' %}
+    </div>
+
+  </div>
+
+
+<br>
+{% endblock %}
+
+{% block tail %} {{ super() }} {% endblock %}

@@ -1,0 +1,40 @@
+<h3>Партнёры</h3>
+<div class="table-responsive">
+    <table class="table table-striped table-bordered table-hover model-list">
+        <thead>
+            <tr>
+                    <th>
+                    	1-й уровень
+                    </th>
+                    <th>
+                    	2-й уровень
+                    </th>
+                    <th>
+                    	3-й уровень
+                    </th>
+
+            </tr>
+        </thead>
+
+        <tr>
+                <td>
+                	{% for p in p_level_1_list %}
+                        <a href="{{ url_for('user.index_view') + 'edit/?id=' + p.user_id|string }}">{{ p.user_id|string + ' - ' + p.first_name }}</a>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for p in p_level_2_list %}
+                        <a href="{{ url_for('user.index_view') + 'edit/?id=' + p.user_id|string }}">{{ p.user_id|string + ' - ' + p.first_name }}</a>
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for p in p_level_3_list %}
+                        <a href="{{ url_for('user.index_view') + 'edit/?id=' + p.user_id|string }}">{{ p.user_id|string + ' - ' + p.first_name }}</a>
+                    {% endfor %}
+                </td>
+
+        </tr>
+
+
+    </table>
+</div>
