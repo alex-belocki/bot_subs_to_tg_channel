@@ -9,6 +9,7 @@ from core.interface.message.repositories import MessageRepository
 from common.models.models import *
 from common.models.base import Base
 from common.models.interface_models import Button, Menu, Message
+from common.models.payments_models import Payment
 from common.models.subscriptions_models import Subscription, SubscriptionAccess
 from common.models.users_models import User
 from modules.users.repositories import AdminRepository
@@ -50,6 +51,18 @@ async def create_db():
             text_en="Buy subscription (90 days)",
             callback_data="buy_subscription",
         )
+        btn_pay_robokassa = await ensure_button(
+            slug="btn-pay-robokassa",
+            text_ru="💳 Robokassa",
+            text_en="💳 Robokassa",
+            callback_data="pay_robokassa",
+        )
+        btn_pay_ton = await ensure_button(
+            slug="btn-pay-ton",
+            text_ru="💎 TON (CryptoBot)",
+            text_en="💎 TON (CryptoBot)",
+            callback_data="pay_ton",
+        )
         btn_my = await ensure_button(
             slug="btn-my-subscription",
             text_ru="Моя подписка",
@@ -90,6 +103,7 @@ async def create_db():
 
         await ensure_menu("menu-start", [[btn_buy], [btn_my], [btn_support]])
         await ensure_menu("menu-support", [[btn_close]])
+        await ensure_menu("menu-pay-method", [[btn_pay_robokassa], [btn_pay_ton], [btn_close]])
         await ensure_menu("menu-my-sub-active", [[btn_get_invite], [btn_close]])
         await ensure_menu("menu-my-sub-inactive", [[btn_buy], [btn_support], [btn_close]])
         await ensure_menu("menu-invite", [[btn_close]])
@@ -120,6 +134,16 @@ async def create_db():
                     "Пока что подписку можно выдать вручную через администратора."
                 ),
                 text_en="Payments will be added later.",
+            )
+
+        if not await message_repo.get(slug="msg-choose-payment"):
+            await message_repo.add(
+                slug="msg-choose-payment",
+                text_ru=(
+                    "Подписка на 90 дней.\n\n"
+                    "Выберите способ оплаты:"
+                ),
+                text_en="Choose a payment method:",
             )
 
         if not await message_repo.get(slug="msg-support"):

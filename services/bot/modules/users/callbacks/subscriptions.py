@@ -1,7 +1,9 @@
 import datetime as dt
+import os
 
 from telegram import Update
 from telegram.ext import ContextTypes
+import httpx
 
 from core.interface.services import BotInterfaceService
 from core.constants.config import CHANNEL_ID
@@ -15,11 +17,152 @@ async def _menu(mm: MessageManager, slug: str):
     return await bi.get_keyboard(menu=menu, lang=lang)
 
 
+async def _require_internal_api(mm: MessageManager) -> tuple[str, str]:
+    web_base_url = (os.getenv("WEB_BASE_URL") or "http://web:5000").rstrip("/")
+    internal_token = os.getenv("INTERNAL_API_TOKEN") or ""
+    if not internal_token:
+        raise RuntimeError("INTERNAL_API_TOKEN is not set")
+    return web_base_url, internal_token
+
+
 async def buy_subscription_stub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with MessageManager(update, context) as mm:
+        # Первый шаг: предлагаем выбрать способ оплаты.
         await mm.edit_message_text(
-            "msg-buy-subscription-stub",
+            "msg-choose-payment",
             msg_id=mm.message.message_id,
+            reply_markup=await _menu(mm, "menu-pay-method"),
+        )
+        return
+
+
+async def pay_robokassa(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async with MessageManager(update, context) as mm:
+        try:
+            web_base_url, internal_token = await _require_internal_api(mm)
+        except RuntimeError:
+            await mm.bot.edit_message_text(
+                chat_id=mm.chat_id,
+                message_id=mm.message.message_id,
+                text="Оплата пока не настроена (INTERNAL_API_TOKEN не задан).",
+                reply_markup=await _menu(mm, "menu-start"),
+            )
+            return
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    f"{web_base_url}/payments/robokassa/create",
+                    json={"user_id": mm.user_id},
+                    headers={"X-Internal-Token": internal_token},
+                )
+                data = resp.json()
+        except Exception as exc:
+            await mm.bot.edit_message_text(
+                chat_id=mm.chat_id,
+                message_id=mm.message.message_id,
+                text=f"Не удалось создать платёж. Попробуйте позже.\n\nОшибка: {exc}",
+                reply_markup=await _menu(mm, "menu-start"),
+            )
+            return
+
+        if resp.status_code != 200:
+            err = data.get("error") if isinstance(data, dict) else str(data)
+            await mm.bot.edit_message_text(
+                chat_id=mm.chat_id,
+                message_id=mm.message.message_id,
+                text=f"Не удалось создать платёж. Код {resp.status_code}.\n{err}",
+                reply_markup=await _menu(mm, "menu-start"),
+            )
+            return
+
+        payment_url = data.get("payment_url")
+        inv_id = data.get("inv_id")
+        if not payment_url:
+            await mm.bot.edit_message_text(
+                chat_id=mm.chat_id,
+                message_id=mm.message.message_id,
+                text="Не удалось получить ссылку оплаты. Попробуйте позже.",
+                reply_markup=await _menu(mm, "menu-start"),
+            )
+            return
+
+        await mm.bot.edit_message_text(
+            chat_id=mm.chat_id,
+            message_id=mm.message.message_id,
+            text=(
+                "Ссылка для оплаты подписки на 90 дней:\n\n"
+                f"{payment_url}\n\n"
+                f"Номер счёта: {inv_id}\n\n"
+                "После оплаты бот пришлёт инвайт-ссылку автоматически."
+            ),
+            disable_web_page_preview=True,
+            reply_markup=await _menu(mm, "menu-start"),
+        )
+
+
+async def pay_ton(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async with MessageManager(update, context) as mm:
+        try:
+            web_base_url, internal_token = await _require_internal_api(mm)
+        except RuntimeError:
+            await mm.bot.edit_message_text(
+                chat_id=mm.chat_id,
+                message_id=mm.message.message_id,
+                text="Оплата пока не настроена (INTERNAL_API_TOKEN не задан).",
+                reply_markup=await _menu(mm, "menu-start"),
+            )
+            return
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                resp = await client.post(
+                    f"{web_base_url}/payments/cryptobot/create",
+                    json={"user_id": mm.user_id},
+                    headers={"X-Internal-Token": internal_token},
+                )
+                data = resp.json()
+        except Exception as exc:
+            await mm.bot.edit_message_text(
+                chat_id=mm.chat_id,
+                message_id=mm.message.message_id,
+                text=f"Не удалось создать TON-инвойс. Попробуйте позже.\n\nОшибка: {exc}",
+                reply_markup=await _menu(mm, "menu-start"),
+            )
+            return
+
+        if resp.status_code != 200:
+            err = data.get("error") if isinstance(data, dict) else str(data)
+            await mm.bot.edit_message_text(
+                chat_id=mm.chat_id,
+                message_id=mm.message.message_id,
+                text=f"Не удалось создать TON-инвойс. Код {resp.status_code}.\n{err}",
+                reply_markup=await _menu(mm, "menu-start"),
+            )
+            return
+
+        pay_url = data.get("pay_url")
+        invoice_id = data.get("invoice_id")
+        if not pay_url:
+            await mm.bot.edit_message_text(
+                chat_id=mm.chat_id,
+                message_id=mm.message.message_id,
+                text="Не удалось получить ссылку оплаты TON. Попробуйте позже.",
+                reply_markup=await _menu(mm, "menu-start"),
+            )
+            return
+
+        await mm.bot.edit_message_text(
+            chat_id=mm.chat_id,
+            message_id=mm.message.message_id,
+            text=(
+                "Оплата в TON (CryptoBot).\n\n"
+                "Ссылка для оплаты подписки на 90 дней:\n\n"
+                f"{pay_url}\n\n"
+                f"Invoice ID: {invoice_id}\n\n"
+                "После оплаты бот пришлёт инвайт-ссылку автоматически."
+            ),
+            disable_web_page_preview=True,
             reply_markup=await _menu(mm, "menu-start"),
         )
 

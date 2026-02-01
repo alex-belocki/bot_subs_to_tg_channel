@@ -12,6 +12,7 @@ from common.models.interface_models import Button, Menu, Message
 from common.models.models import Settings
 from common.models.users_models import SendMessageCampaign, User
 from common.models.subscriptions_models import Subscription, SubscriptionAccess
+from modules.payments import payments_bp
 
 
 logging.basicConfig(
@@ -25,6 +26,7 @@ def create_app() -> Flask:
 
     app.config.from_pyfile('core/constants/config.py')
     db.init_app(app)
+    app.register_blueprint(payments_bp)
 
     login_manager = LoginManager()
     login_manager.init_app(app)
@@ -90,6 +92,7 @@ def create_app() -> Flask:
     return cast(Flask, admin.app)
 
 
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     app.run(host='0.0.0.0')

@@ -20,3 +20,5 @@ taskiq-dependencies==1.5.7
 taskiq-nats==0.5.1
 taskiq[reload]
 Werkzeug==2.3.7
+httpx
+aiosend
