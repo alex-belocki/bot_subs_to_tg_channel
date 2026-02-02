@@ -27,3 +27,4 @@ dumpdb
 *.sql
 exp_*.py
 .cursor/
+sshclient
