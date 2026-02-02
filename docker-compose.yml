@@ -1,7 +1,7 @@
 services:
   nats:
     image: nats:2-alpine
-    command: ["/nats-server", "-c", "/etc/nats/server.conf"]
+    command: ["nats-server", "-c", "/etc/nats/server.conf"]
     ports:
       - "4222:4222"
       - "8222:8222"
