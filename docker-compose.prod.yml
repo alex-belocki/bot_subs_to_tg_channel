@@ -1,6 +1,6 @@
 services:
   nats:
-    image: nats:latest
+    image: nats:2-alpine
     entrypoint: ["/bin/sh", "-ec"]
     command: |
       cat >/tmp/nats.conf <<'EOF'
@@ -12,7 +12,7 @@ services:
 
       http_port: 8222
       EOF
-      exec nats-server -c /tmp/nats.conf
+      exec /nats-server -c /tmp/nats.conf
     restart: always
     ports:
       - "4222:4222"

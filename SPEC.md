@@ -417,7 +417,7 @@
 - **dev** (`docker-compose.yml`):
   - `web` публикуется наружу на `:5000`.
   - `nats` публикуется `4222/8222`, есть `nats-nui` на `31311`.
-  - NATS JetStream включён без отдельного файла в репозитории: конфиг генерируется при старте контейнера (хранилище в `/data` на томе `nats_data`, лимиты: mem `1G`, file `5G`, `http_port=8222`).
+  - NATS JetStream включён без отдельного файла в репозитории: конфиг генерируется при старте контейнера (для этого NATS зафиксирован на `nats:2-alpine`, где есть `/bin/sh`). Хранилище в `/data` на томе `nats_data`, лимиты: mem `1G`, file `5G`, `http_port=8222`.
   - `taskiq-worker`/`taskiq-scheduler` используют образ `bot` и подключены к NATS.
   - `db` — Postgres 13.
 - **prod** (`docker-compose.prod.yml`):
