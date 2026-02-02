@@ -11,11 +11,6 @@ services:
       - "443:443"
     command:
       - --configFile=/etc/traefik/traefik.yml
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --certificatesresolvers.le.acme.email=${TRAEFIK_ACME_EMAIL:-admin@sales.alina-zhagulova.kz}
-      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
-      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_letsencrypt:/letsencrypt

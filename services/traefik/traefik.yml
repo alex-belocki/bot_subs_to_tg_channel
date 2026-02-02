@@ -20,6 +20,14 @@ entryPoints:
   websecure:
     address: ":443"
 
+certificatesResolvers:
+  le:
+    acme:
+      email: admin@sales.alina-zhagulova.kz
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web
+
 providers:
   docker:
     exposedByDefault: false
