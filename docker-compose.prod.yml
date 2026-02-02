@@ -1,23 +1,13 @@
 services:
   nats:
     image: nats:2-alpine
-    entrypoint: ["/bin/sh", "-ec"]
-    command: |
-      printf '%s\n' \
-        'jetstream {' \
-        '  store_dir: "/data"' \
-        '  max_mem: "1G"' \
-        '  max_file: "5G"' \
-        '}' \
-        '' \
-        'http_port: 8222' \
-        > /tmp/nats.conf
-      exec /nats-server -c /tmp/nats.conf
+    command: ["/nats-server", "-c", "/etc/nats/server.conf"]
     restart: always
     ports:
       - "4222:4222"
       - "8222:8222"
     volumes:
+      - ./infra/nats/server.conf:/etc/nats/server.conf:ro
       - nats_data:/data
 
   nats-nui:
