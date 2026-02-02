@@ -59,7 +59,8 @@
 - **`nats`**: NATS JetStream (шина событий).
 - **`taskiq-worker`**: worker фоновых задач (через NATS JetStream).
 - **`taskiq-scheduler`**: планировщик периодических задач (cron).
-- **`nginx`** (только prod): прокси для `web`, статик/медиа.
+- **`traefik`** (только prod): edge‑reverse‑proxy, HTTPS (Let's Encrypt), маршрутизация по домену.
+- **`nginx`** (только prod): внутренний прокси для `web`, статик/медиа (за `traefik`).
 - **`nats-nui`**: UI для NATS (наблюдаемость/отладка).
 
 #### Потоки данных

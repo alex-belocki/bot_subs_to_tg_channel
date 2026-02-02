@@ -5,6 +5,7 @@ from typing import cast
 from flask import Flask, redirect, url_for
 from flask_admin import Admin
 from flask_login import current_user, LoginManager
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from core.database.database import db
 from common.models.admin_models import AdminModel
@@ -23,6 +24,10 @@ logging.basicConfig(
 
 def create_app() -> Flask:
     app = Flask(__name__)
+
+    # Running behind reverse proxies (Traefik -> nginx) in production.
+    # Trust a single hop for forwarded headers.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     app.config.from_pyfile('core/constants/config.py')
     db.init_app(app)
