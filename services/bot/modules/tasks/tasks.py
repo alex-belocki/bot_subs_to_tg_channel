@@ -169,20 +169,41 @@ async def payments_reconcile_cryptobot_pending() -> None:
                 continue
             if str(inv.status) != "paid":
                 continue
-            if str(inv.asset) != "TON":
-                continue
 
-            incoming_amount = Decimal(str(inv.amount)).quantize(Decimal("0.000000001"))
-            expected_amount = Decimal(str(p.amount)).quantize(Decimal("0.000000001"))
-            if incoming_amount != expected_amount:
-                logger.warning(
-                    "cryptobot amount mismatch payment_id=%s invoice_id=%s expected=%s got=%s",
-                    p.id,
-                    inv.invoice_id,
-                    expected_amount,
-                    incoming_amount,
-                )
-                continue
+            # Фиатный инвойс (KZT): сверяем фиатную сумму.
+            if p.currency == "KZT":
+                inv_fiat = getattr(inv, "fiat", None) or ""
+                if str(inv_fiat) != "KZT":
+                    continue
+                try:
+                    incoming = Decimal(str(inv.amount)).quantize(Decimal("0.01"))
+                    expected = Decimal(str(p.amount)).quantize(Decimal("0.01"))
+                except Exception:
+                    continue
+                if incoming != expected:
+                    logger.warning(
+                        "cryptobot amount mismatch payment_id=%s invoice_id=%s expected=%s got=%s",
+                        p.id,
+                        inv.invoice_id,
+                        expected,
+                        incoming,
+                    )
+                    continue
+            else:
+                # Старые инвойсы в TON.
+                if str(getattr(inv, "asset", "") or "") != "TON":
+                    continue
+                incoming_amount = Decimal(str(inv.amount)).quantize(Decimal("0.000000001"))
+                expected_amount = Decimal(str(p.amount)).quantize(Decimal("0.000000001"))
+                if incoming_amount != expected_amount:
+                    logger.warning(
+                        "cryptobot amount mismatch payment_id=%s invoice_id=%s expected=%s got=%s",
+                        p.id,
+                        inv.invoice_id,
+                        expected_amount,
+                        incoming_amount,
+                    )
+                    continue
 
             # Идемпотентность: если уже успели обработать (например webhook), пропускаем.
             if p.status == "success":

@@ -169,7 +169,7 @@
   - `user_id` → bigint → not null → FK → `users.user_id`
   - `provider` → text → not null (`robokassa`, `cryptobot`)
   - `amount` → numeric(12,2) → not null
-  - `currency` → text → not null (например `RUB` для Robokassa, `TON` для CryptoBot)
+  - `currency` → text → not null (например `KZT` для Robokassa и CryptoBot; ранее использовались `RUB`/`TON`)
   - `status` → text/enum → not null (`pending`, `success`, `failed`, `canceled`)
   - `provider_payment_id` → text → null (ID платежа у провайдера; для Robokassa/ CryptoBot)
   - `provider_invoice_id` → text → null (если провайдер разделяет invoice/payment)
@@ -454,7 +454,9 @@
 - `ROBO_MERCHANT_LOGIN`
 - `ROBO_PASSWORD_1` / `ROBO_PASSWORD_2` (в зависимости от схемы подписи)
 - `ROBO_ALLOWED_IPS` (опционально)
+- `TARIFF_AMOUNT_KZT` (единая цена подписки в тенге, например 5000)
 - `CRYPTOBOT_TOKEN`
+- `CRYPTOBOT_DESCRIPTION` (описание инвойса)
 - `CRYPTOBOT_WEBHOOK_SECRET` (если доступно)
 - `PUBLIC_BASE_URL` (нужен, чтобы формировать callback URLs и возвращаемые ссылки)
 

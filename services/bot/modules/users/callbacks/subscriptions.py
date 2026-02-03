@@ -126,7 +126,7 @@ async def pay_ton(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await mm.bot.edit_message_text(
                 chat_id=mm.chat_id,
                 message_id=mm.message.message_id,
-                text=f"Не удалось создать TON-инвойс. Попробуйте позже.\n\nОшибка: {exc}",
+                text=f"Не удалось создать счёт на оплату. Попробуйте позже.\n\nОшибка: {exc}",
                 reply_markup=await _menu(mm, "menu-start"),
             )
             return
@@ -136,7 +136,7 @@ async def pay_ton(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await mm.bot.edit_message_text(
                 chat_id=mm.chat_id,
                 message_id=mm.message.message_id,
-                text=f"Не удалось создать TON-инвойс. Код {resp.status_code}.\n{err}",
+                text=f"Не удалось создать счёт на оплату. Код {resp.status_code}.\n{err}",
                 reply_markup=await _menu(mm, "menu-start"),
             )
             return
@@ -147,7 +147,7 @@ async def pay_ton(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await mm.bot.edit_message_text(
                 chat_id=mm.chat_id,
                 message_id=mm.message.message_id,
-                text="Не удалось получить ссылку оплаты TON. Попробуйте позже.",
+                text="Не удалось получить ссылку оплаты. Попробуйте позже.",
                 reply_markup=await _menu(mm, "menu-start"),
             )
             return
@@ -156,10 +156,10 @@ async def pay_ton(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=mm.chat_id,
             message_id=mm.message.message_id,
             text=(
-                "Оплата в TON (CryptoBot).\n\n"
+                "Оплата 5000 ₸ в TON (CryptoBot).\n\n"
                 "Ссылка для оплаты подписки на 90 дней:\n\n"
                 f"{pay_url}\n\n"
-                f"Invoice ID: {invoice_id}\n\n"
+                f"Номер счёта: {invoice_id}\n\n"
                 "После оплаты бот пришлёт инвайт-ссылку автоматически."
             ),
             disable_web_page_preview=True,

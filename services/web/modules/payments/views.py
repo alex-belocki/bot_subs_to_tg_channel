@@ -55,16 +55,11 @@ def _enforce_robokassa_ip_allowlist() -> None:
         raise PermissionError("robokassa_ip_not_allowed")
 
 
-def _tariff_amount_rub() -> Any:
-    value = (os.getenv("ROBO_TARIFF_AMOUNT_RUB") or "").strip()
+def _tariff_amount_kzt() -> Any:
+    """Получает стоимость тарифа в KZT из переменных окружения."""
+    value = (os.getenv("TARIFF_AMOUNT_KZT") or "").strip()
     if not value:
-        raise RuntimeError("ROBO_TARIFF_AMOUNT_RUB is not set")
-    return parse_decimal(value)
-
-def _tariff_amount_ton() -> Any:
-    value = (os.getenv("CRYPTOBOT_TARIFF_AMOUNT_TON") or "").strip()
-    if not value:
-        raise RuntimeError("CRYPTOBOT_TARIFF_AMOUNT_TON is not set")
+        raise RuntimeError("TARIFF_AMOUNT_KZT is not set")
     return parse_decimal(value)
 
 def _verify_cryptobot_signature(raw_body: bytes, signature_hex: str, token: str) -> bool:
@@ -101,13 +96,13 @@ def robokassa_create():
     if not merchant_login or not password1:
         return jsonify({"error": "robokassa_not_configured"}), 500
 
-    amount = _tariff_amount_rub()
+    amount = _tariff_amount_kzt()
 
     payment = Payment(
         user_id=user_id,
         provider="robokassa",
         amount=amount,
-        currency="RUB",
+        currency="KZT",
         status="pending",
     )
     db.session.add(payment)
@@ -167,8 +162,8 @@ def robokassa_result():
         if k.lower().startswith("shp_"):
             shp[k] = v
 
-    # Проверка суммы (фиксированный тариф).
-    expected_amount = normalize_amount_2dp(_tariff_amount_rub())
+    # Проверка суммы (фиксированный тариф в KZT).
+    expected_amount = normalize_amount_2dp(_tariff_amount_kzt())
     incoming_amount = normalize_amount_2dp(out_sum)
     if incoming_amount != expected_amount:
         return jsonify({"error": "amount_mismatch"}), 400
@@ -233,15 +228,15 @@ def cryptobot_create():
     if not token:
         return jsonify({"error": "cryptobot_not_configured"}), 500
 
-    amount = _tariff_amount_ton()
+    amount = _tariff_amount_kzt()
     description = (os.getenv("CRYPTOBOT_DESCRIPTION") or "Подписка на 90 дней").strip()
 
-    # 1) Создаём локальную запись Payment (источник истины в нашей БД).
+    # 1) Создаём запись Payment в KZT.
     payment = Payment(
         user_id=user_id,
         provider="cryptobot",
         amount=amount,
-        currency="TON",
+        currency="KZT",
         status="pending",
     )
     db.session.add(payment)
@@ -249,10 +244,9 @@ def cryptobot_create():
 
     payload = f"pay:{payment.id}"
 
-    # 2) Создаём invoice в CryptoBot через aiosend.
+    # 2) Создаём invoice в CryptoBot в фиате (KZT), оплата в TON по курсу.
     try:
         from aiosend import CryptoPay
-        from aiosend.enums import Asset
     except Exception as exc:
         return jsonify({"error": f"aiosend_not_available:{exc}"}), 500
 
@@ -260,8 +254,10 @@ def cryptobot_create():
         cp = CryptoPay(token=token)
         invoice = asyncio.run(
             cp.create_invoice(
-                float(amount),
-                Asset.TON,
+                amount=float(amount),
+                currency_type="fiat",
+                fiat="KZT",
+                accepted_assets=["TON"],
                 description=description,
                 payload=payload,
             )
@@ -323,6 +319,7 @@ def cryptobot_webhook():
     invoice_id = payload.get("invoice_id")
     invoice_status = (payload.get("status") or "").strip()
     invoice_asset = (payload.get("asset") or "").strip()
+    invoice_fiat = (payload.get("fiat") or "").strip()
     invoice_amount = payload.get("amount")
     invoice_payload = payload.get("payload")
 
@@ -334,7 +331,10 @@ def cryptobot_webhook():
     # В webhook update может прилетать статус paid; проверяем его.
     if invoice_status and invoice_status != "paid":
         return jsonify({"ok": True}), 200
-    if invoice_asset and invoice_asset != "TON":
+    # Фиатный инвойс (KZT): asset может отсутствовать или быть у paid_asset.
+    if invoice_fiat and invoice_fiat != "KZT":
+        return jsonify({"error": "currency_not_supported"}), 400
+    if not invoice_fiat and invoice_asset and invoice_asset != "TON":
         return jsonify({"error": "asset_not_supported"}), 400
 
     # Ищем Payment по invoice_id, либо по payload.
@@ -370,14 +370,26 @@ def cryptobot_webhook():
     if payment.status == "success":
         return jsonify({"ok": True}), 200
 
-    # Сверяем сумму (с точностью до 9 знаков для TON).
-    try:
-        incoming_amount = Decimal(str(invoice_amount)).quantize(Decimal("0.000000001"))
-        expected_amount = Decimal(str(payment.amount)).quantize(Decimal("0.000000001"))
-    except Exception:
-        return jsonify({"error": "invalid_amount"}), 400
-    if incoming_amount != expected_amount:
-        return jsonify({"error": "amount_mismatch"}), 400
+    # Сверяем сумму: для KZT — фиатная сумма (2 знака), для TON — крипто (9 знаков).
+    if payment.currency == "KZT":
+        if invoice_fiat != "KZT":
+            return jsonify({"error": "currency_mismatch"}), 400
+        try:
+            incoming_val = Decimal(str(invoice_amount)).quantize(Decimal("0.01"))
+            expected_val = Decimal(str(payment.amount)).quantize(Decimal("0.01"))
+        except Exception:
+            return jsonify({"error": "invalid_amount"}), 400
+        if incoming_val != expected_val:
+            return jsonify({"error": "amount_mismatch"}), 400
+    else:
+        # Старые инвойсы в TON.
+        try:
+            incoming_amount = Decimal(str(invoice_amount)).quantize(Decimal("0.000000001"))
+            expected_amount = Decimal(str(payment.amount)).quantize(Decimal("0.000000001"))
+        except Exception:
+            return jsonify({"error": "invalid_amount"}), 400
+        if incoming_amount != expected_amount:
+            return jsonify({"error": "amount_mismatch"}), 400
 
     # Доп. верификация через API: подтягиваем invoice и убеждаемся, что он реально PAID.
     try:

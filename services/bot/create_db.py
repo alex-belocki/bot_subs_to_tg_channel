@@ -65,8 +65,8 @@ async def create_db():
         )
         btn_pay_ton = await ensure_button(
             slug="btn-pay-ton",
-            text_ru="💎 TON (CryptoBot)",
-            text_en="💎 TON (CryptoBot)",
+            text_ru="💎 TON / 5000 ₸ (CryptoBot)",
+            text_en="💎 TON / 5000 ₸ (CryptoBot)",
             callback_data="pay_ton",
         )
         btn_my = await ensure_button(
@@ -162,10 +162,11 @@ async def create_db():
             await message_repo.add(
                 slug="msg-choose-payment",
                 text_ru=(
-                    "Подписка на 90 дней.\n\n"
+                    "Подписка на 90 дней.\n"
+                    "Стоимость: 5000 ₸\n\n"
                     "Выберите способ оплаты:"
                 ),
-                text_en="Choose a payment method:",
+                text_en="90-day subscription.\nCost: 5000 ₸\n\nChoose a payment method:",
             )
 
         if not await message_repo.get(slug="msg-support"):
