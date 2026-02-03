@@ -37,6 +37,12 @@ async def create_db():
             text_en="Close",
             callback_data="close",
         )
+        btn_back = await ensure_button(
+            slug="btn-back",
+            text_ru="◀️ Назад",
+            text_en="◀️ Back",
+            callback_data="back_to_main",
+        )
 
         await ensure_button(
             slug="btn-cancel",
@@ -81,6 +87,18 @@ async def create_db():
             text_en="Get invite link",
             callback_data="get_invite",
         )
+        btn_privacy = await ensure_button(
+            slug="btn-privacy",
+            text_ru="🔒 Политика конфиденциальности",
+            text_en="🔒 Privacy Policy",
+            callback_data="cmd_privacy",
+        )
+        btn_offer = await ensure_button(
+            slug="btn-offer",
+            text_ru="📄 Оферта",
+            text_en="📄 Offer",
+            callback_data="cmd_offer",
+        )
 
         async def ensure_menu(slug: str, rows: list[list[Button]]) -> Menu:
             menu = await menu_repo.get(slug=slug)
@@ -101,11 +119,15 @@ async def create_db():
             await session.flush()
             return menu
 
-        await ensure_menu("menu-start", [[btn_buy], [btn_my], [btn_support]])
-        await ensure_menu("menu-support", [[btn_close]])
+        await ensure_menu(
+            "menu-start",
+            [[btn_buy], [btn_my], [btn_support], [btn_privacy, btn_offer]],
+        )
+        await ensure_menu("menu-back", [[btn_back]])
+        await ensure_menu("menu-support", [[btn_back]])
         await ensure_menu("menu-pay-method", [[btn_pay_robokassa], [btn_pay_ton], [btn_close]])
-        await ensure_menu("menu-my-sub-active", [[btn_get_invite], [btn_close]])
-        await ensure_menu("menu-my-sub-inactive", [[btn_buy], [btn_support], [btn_close]])
+        await ensure_menu("menu-my-sub-active", [[btn_get_invite], [btn_back]])
+        await ensure_menu("menu-my-sub-inactive", [[btn_buy], [btn_support], [btn_back]])
         await ensure_menu("menu-invite", [[btn_close]])
 
         message_repo = MessageRepository(session)
@@ -182,6 +204,29 @@ async def create_db():
                 slug="msg-invite-rate-limited",
                 text_ru="Инвайт можно запрашивать не чаще 1 раза в минуту.",
                 text_en="Invite link can be requested once per minute.",
+            )
+
+        if not await message_repo.get(slug="msg-privacy"):
+            await message_repo.add(
+                slug="msg-privacy",
+                text_ru=(
+                    "<b>Политика конфиденциальности</b>\n\n"
+                    "Здесь разместите полный текст вашей политики конфиденциальности.\n"
+                    "Можно использовать HTML теги, например <b>жирный</b> или "
+                    "<a href=\"...\">ссылки</a>."
+                ),
+                text_en="<b>Privacy Policy</b>\n\nPlace your privacy policy text here.",
+            )
+
+        if not await message_repo.get(slug="msg-offer"):
+            await message_repo.add(
+                slug="msg-offer",
+                text_ru=(
+                    "<b>Публичная оферта</b>\n\n"
+                    "Здесь разместите текст оферты.\n"
+                    "Текст может быть длинным, Telegram поддерживает до 4096 символов."
+                ),
+                text_en="<b>Public Offer</b>\n\nPlace your offer text here.",
             )
 
         # добавляем админа

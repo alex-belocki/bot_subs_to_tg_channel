@@ -43,6 +43,18 @@ class UserHandler(BaseHandler):
             get_invite,
             pattern=await self.pattern('btn-get-invite'),
         )
+        yield CallbackQueryHandler(
+            show_privacy,
+            pattern=await self.pattern('btn-privacy'),
+        )
+        yield CallbackQueryHandler(
+            show_offer,
+            pattern=await self.pattern('btn-offer'),
+        )
+        yield CallbackQueryHandler(
+            back_to_main,
+            pattern=await self.pattern('btn-back'),
+        )
 
         yield CallbackQueryHandler(delete_message,
                                    pattern=await self.pattern('btn-close'))

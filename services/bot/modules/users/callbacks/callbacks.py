@@ -6,6 +6,8 @@ from telegram.ext import ContextTypes
 
 from core.message_manager import MessageManager
 
+from .subscriptions import _menu
+
 
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s',
@@ -56,3 +58,39 @@ async def delete_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for message_id in mm.message_id_list:
             await mm.delete_message(message_id)
         await mm.delete_message(mm.message.message_id)
+
+
+async def show_privacy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Редактирует текущее сообщение — политика конфиденциальности и кнопка Назад."""
+    async with MessageManager(update, context) as mm:
+        await mm.edit_message_text(
+            "msg-privacy",
+            msg_id=mm.message.message_id,
+            reply_markup=await _menu(mm, "menu-back"),
+        )
+        if mm.is_query:
+            await mm.query.answer()
+
+
+async def show_offer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Редактирует текущее сообщение — оферта и кнопка Назад."""
+    async with MessageManager(update, context) as mm:
+        await mm.edit_message_text(
+            "msg-offer",
+            msg_id=mm.message.message_id,
+            reply_markup=await _menu(mm, "menu-back"),
+        )
+        if mm.is_query:
+            await mm.query.answer()
+
+
+async def back_to_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Возврат в главное меню — редактирует сообщение на msg-start с menu-start."""
+    async with MessageManager(update, context) as mm:
+        await mm.edit_message_text(
+            "msg-start",
+            msg_id=mm.message.message_id,
+            reply_markup=await _menu(mm, "menu-start"),
+        )
+        if mm.is_query:
+            await mm.query.answer()

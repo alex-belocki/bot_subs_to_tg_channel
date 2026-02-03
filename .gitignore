@@ -28,3 +28,4 @@ dumpdb
 exp_*.py
 .cursor/
 sshclient
+repomix*.xml
