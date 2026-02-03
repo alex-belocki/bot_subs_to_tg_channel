@@ -128,6 +128,8 @@ class BotInterfaceService:
 
     async def get_settings(self, key: str):
         settings = await self.uow.settings_repo.get(key=key)
+        if not settings:
+            return None
         return settings.value
 
     def is_float(self, element) -> bool:

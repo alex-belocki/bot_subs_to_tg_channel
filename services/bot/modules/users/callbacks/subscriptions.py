@@ -27,11 +27,16 @@ async def _require_internal_api(mm: MessageManager) -> tuple[str, str]:
 
 async def buy_subscription_stub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with MessageManager(update, context) as mm:
-        # Первый шаг: предлагаем выбрать способ оплаты.
+        price = await mm.config("TARIFF_AMOUNT_KZT")
+        if price is None:
+            price = "5000"
+        else:
+            price = str(price)
         await mm.edit_message_text(
             "msg-choose-payment",
             msg_id=mm.message.message_id,
             reply_markup=await _menu(mm, "menu-pay-method"),
+            price=price,
         )
         return
 
@@ -87,11 +92,14 @@ async def pay_robokassa(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
+        description = await mm.config("CRYPTOBOT_DESCRIPTION") or "Подписка на 90 дней"
+        price = await mm.config("TARIFF_AMOUNT_KZT")
+        price_str = str(price) if price is not None else "5000"
         await mm.bot.edit_message_text(
             chat_id=mm.chat_id,
             message_id=mm.message.message_id,
             text=(
-                "Ссылка для оплаты подписки на 90 дней:\n\n"
+                f"Ссылка для оплаты {description} ({price_str} ₸):\n\n"
                 f"{payment_url}\n\n"
                 f"Номер счёта: {inv_id}\n\n"
                 "После оплаты бот пришлёт инвайт-ссылку автоматически."
@@ -152,12 +160,15 @@ async def pay_ton(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
+        description = await mm.config("CRYPTOBOT_DESCRIPTION") or "Подписка на 90 дней"
+        price = await mm.config("TARIFF_AMOUNT_KZT")
+        price_str = str(price) if price is not None else "5000"
         await mm.bot.edit_message_text(
             chat_id=mm.chat_id,
             message_id=mm.message.message_id,
             text=(
-                "Оплата 5000 ₸ в TON (CryptoBot).\n\n"
-                "Ссылка для оплаты подписки на 90 дней:\n\n"
+                f"Оплата {price_str} ₸ в TON (CryptoBot).\n\n"
+                f"Ссылка для оплаты {description}:\n\n"
                 f"{pay_url}\n\n"
                 f"Номер счёта: {invoice_id}\n\n"
                 "После оплаты бот пришлёт инвайт-ссылку автоматически."

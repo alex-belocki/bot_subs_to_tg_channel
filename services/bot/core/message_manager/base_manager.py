@@ -224,14 +224,14 @@ class BaseMessageManager:
             return ConversationHandler.END
 
     async def get_message(self, slug: str):
-        return await BotInterfaceService(self.session).get_message(slug)
+        return await BotInterfaceService(self.uow).get_message(slug)
 
     async def get_button(self, slug: str):
-        return await BotInterfaceService(self.session).get_button(slug)
+        return await BotInterfaceService(self.uow).get_button(slug)
 
     async def get_button_by_text(self, text: str):
         return (
-            await BotInterfaceService(self.session)
+            await BotInterfaceService(self.uow)
             .get_button_by_text(text)
         )
 
@@ -240,7 +240,7 @@ class BaseMessageManager:
         if key in dev_mode_list and DEV_MODE:
             key = 'DEV_' + key  # когда разные данные на сервере и локально, например, CHANNEL_ID
         return (
-            await BotInterfaceService(self.session)
+            await BotInterfaceService(self.uow)
             .get_settings(key)
         )
 
@@ -254,7 +254,7 @@ class BaseMessageManager:
 
         lang = await self.get_lang()
         keyboard = (
-            await BotInterfaceService(self.session)
+            await BotInterfaceService(self.uow)
             .get_keyboard(menu=message.menu, lang=lang, **kwargs)
         )
 

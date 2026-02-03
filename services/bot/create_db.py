@@ -6,6 +6,7 @@ from core.database.database import async_session_maker, engine
 from core.interface.button.repositories import ButtonRepository
 from core.interface.menu.repositories import MenuRepository
 from core.interface.message.repositories import MessageRepository
+from core.interface.settings.repositories import SettingsRepository
 from common.models.models import *
 from common.models.base import Base
 from common.models.interface_models import Button, Menu, Message
@@ -130,6 +131,14 @@ async def create_db():
         await ensure_menu("menu-my-sub-inactive", [[btn_back]])
         await ensure_menu("menu-invite", [[btn_close]])
 
+        settings_repo = SettingsRepository(session)
+        if not await settings_repo.get(key="TARIFF_AMOUNT_KZT"):
+            await settings_repo.add(key="TARIFF_AMOUNT_KZT", value_="5000")
+            print("Setting TARIFF_AMOUNT_KZT created")
+        if not await settings_repo.get(key="CRYPTOBOT_DESCRIPTION"):
+            await settings_repo.add(key="CRYPTOBOT_DESCRIPTION", value_="Подписка на 90 дней")
+            print("Setting CRYPTOBOT_DESCRIPTION created")
+
         message_repo = MessageRepository(session)
         menu_start = await menu_repo.get(slug="menu-start")
         message = await message_repo.get(slug="msg-start")
@@ -158,15 +167,25 @@ async def create_db():
                 text_en="Payments will be added later.",
             )
 
-        if not await message_repo.get(slug="msg-choose-payment"):
+        msg_choose_payment = await message_repo.get(slug="msg-choose-payment")
+        if not msg_choose_payment:
             await message_repo.add(
                 slug="msg-choose-payment",
                 text_ru=(
                     "Подписка на 90 дней.\n"
-                    "Стоимость: 5000 ₸\n\n"
+                    "Стоимость: {price} ₸\n\n"
                     "Выберите способ оплаты:"
                 ),
-                text_en="90-day subscription.\nCost: 5000 ₸\n\nChoose a payment method:",
+                text_en="90-day subscription.\nCost: {price} ₸\n\nChoose a payment method:",
+            )
+        else:
+            msg_choose_payment.text_ru = (
+                "Подписка на 90 дней.\n"
+                "Стоимость: {price} ₸\n\n"
+                "Выберите способ оплаты:"
+            )
+            msg_choose_payment.text_en = (
+                "90-day subscription.\nCost: {price} ₸\n\nChoose a payment method:"
             )
 
         if not await message_repo.get(slug="msg-support"):

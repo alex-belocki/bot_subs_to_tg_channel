@@ -454,9 +454,9 @@
 - `ROBO_MERCHANT_LOGIN`
 - `ROBO_PASSWORD_1` / `ROBO_PASSWORD_2` (в зависимости от схемы подписи)
 - `ROBO_ALLOWED_IPS` (опционально)
-- `TARIFF_AMOUNT_KZT` (единая цена подписки в тенге, например 5000)
+- `TARIFF_AMOUNT_KZT` (единая цена подписки в тенге; хранится в таблице `settings`, инициализируется в `create_db`, ENV — фоллбэк)
 - `CRYPTOBOT_TOKEN`
-- `CRYPTOBOT_DESCRIPTION` (описание инвойса)
+- `CRYPTOBOT_DESCRIPTION` (описание инвойса/подписки; хранится в `settings`, ENV — фоллбэк)
 - `CRYPTOBOT_WEBHOOK_SECRET` (если доступно)
 - `PUBLIC_BASE_URL` (нужен, чтобы формировать callback URLs и возвращаемые ссылки)
 

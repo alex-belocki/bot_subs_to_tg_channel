@@ -9,6 +9,7 @@ from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
 
+from common.models.models import Settings
 from common.models.payments_models import Payment
 from core.database.database import db
 
@@ -55,12 +56,20 @@ def _enforce_robokassa_ip_allowlist() -> None:
         raise PermissionError("robokassa_ip_not_allowed")
 
 
+def _get_setting_value(key: str, default: str) -> str:
+    """Получает настройку из БД (sync). Возвращает сырую строку value_."""
+    setting = db.session.query(Settings).filter_by(key=key).first()
+    if setting:
+        return str(setting.value_)
+    return default
+
+
 def _tariff_amount_kzt() -> Any:
-    """Получает стоимость тарифа в KZT из переменных окружения."""
-    value = (os.getenv("TARIFF_AMOUNT_KZT") or "").strip()
-    if not value:
-        raise RuntimeError("TARIFF_AMOUNT_KZT is not set")
-    return parse_decimal(value)
+    """Получает стоимость тарифа в KZT из БД или ENV."""
+    val_str = _get_setting_value(
+        "TARIFF_AMOUNT_KZT", os.getenv("TARIFF_AMOUNT_KZT", "5000")
+    )
+    return parse_decimal(val_str)
 
 def _verify_cryptobot_signature(raw_body: bytes, signature_hex: str, token: str) -> bool:
     """
@@ -109,7 +118,10 @@ def robokassa_create():
     db.session.commit()
 
     inv_id = payment.id
-    description = "Подписка на 90 дней"
+    description = _get_setting_value(
+        "CRYPTOBOT_DESCRIPTION",
+        os.getenv("CRYPTOBOT_DESCRIPTION", "Подписка на 90 дней"),
+    )
     shp = {"Shp_user_id": str(user_id)}
     payment_url = build_payment_link(
         merchant_login=merchant_login,
@@ -229,7 +241,10 @@ def cryptobot_create():
         return jsonify({"error": "cryptobot_not_configured"}), 500
 
     amount = _tariff_amount_kzt()
-    description = (os.getenv("CRYPTOBOT_DESCRIPTION") or "Подписка на 90 дней").strip()
+    description = _get_setting_value(
+        "CRYPTOBOT_DESCRIPTION",
+        os.getenv("CRYPTOBOT_DESCRIPTION", "Подписка на 90 дней"),
+    )
 
     # 1) Создаём запись Payment в KZT.
     payment = Payment(
