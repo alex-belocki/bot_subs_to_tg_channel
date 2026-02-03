@@ -125,7 +125,7 @@ async def create_db():
         )
         await ensure_menu("menu-back", [[btn_back]])
         await ensure_menu("menu-support", [[btn_back]])
-        await ensure_menu("menu-pay-method", [[btn_pay_robokassa], [btn_pay_ton], [btn_close]])
+        await ensure_menu("menu-pay-method", [[btn_pay_robokassa], [btn_pay_ton], [btn_back]])
         await ensure_menu("menu-my-sub-active", [[btn_get_invite], [btn_back]])
         await ensure_menu("menu-my-sub-inactive", [[btn_back]])
         await ensure_menu("menu-invite", [[btn_close]])
