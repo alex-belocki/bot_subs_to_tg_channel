@@ -252,15 +252,14 @@ def cryptobot_create():
 
     try:
         cp = CryptoPay(token=token)
-        invoice = asyncio.run(
-            cp.create_invoice(
-                amount=float(amount),
-                currency_type="fiat",
-                fiat="KZT",
-                accepted_assets=["TON"],
-                description=description,
-                payload=payload,
-            )
+        # Метод create_invoice возвращает готовый объект Invoice, а не корутину.
+        invoice = cp.create_invoice(
+            amount=float(amount),
+            currency_type="fiat",
+            fiat="KZT",
+            accepted_assets=["TON"],
+            description=description,
+            payload=payload,
         )
     except Exception as exc:
         # Если invoice не создался — помечаем payment как failed (чтобы не оставлять вечные pending).
@@ -396,7 +395,8 @@ def cryptobot_webhook():
         from aiosend import CryptoPay
 
         cp = CryptoPay(token=token)
-        invoices = asyncio.run(cp.get_invoices(invoice_ids=[invoice_id_int]))
+        # Метод get_invoices синхронный.
+        invoices = cp.get_invoices(invoice_ids=[invoice_id_int])
         inv = invoices[0] if invoices else None
         if not inv or str(inv.status) != "paid":
             return jsonify({"error": "invoice_not_paid"}), 409
