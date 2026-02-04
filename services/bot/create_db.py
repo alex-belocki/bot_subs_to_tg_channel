@@ -54,8 +54,8 @@ async def create_db():
 
         btn_buy = await ensure_button(
             slug="btn-buy-subscription",
-            text_ru="Оформить подписку (90 дней)",
-            text_en="Buy subscription (90 days)",
+            text_ru="Оформить подписку (30 дней)",
+            text_en="Buy subscription (30 days)",
             callback_data="buy_subscription",
         )
         btn_pay_robokassa = await ensure_button(
@@ -136,7 +136,7 @@ async def create_db():
             await settings_repo.add(key="TARIFF_AMOUNT_KZT", value_="5000")
             print("Setting TARIFF_AMOUNT_KZT created")
         if not await settings_repo.get(key="CRYPTOBOT_DESCRIPTION"):
-            await settings_repo.add(key="CRYPTOBOT_DESCRIPTION", value_="Подписка на 90 дней")
+            await settings_repo.add(key="CRYPTOBOT_DESCRIPTION", value_="Подписка на 30 дней")
             print("Setting CRYPTOBOT_DESCRIPTION created")
 
         message_repo = MessageRepository(session)
@@ -147,7 +147,7 @@ async def create_db():
                 slug="msg-start",
                 text_ru=(
                     "Привет!\n\n"
-                    "Это бот для доступа в закрытый канал по подписке на 90 дней.\n\n"
+                    "Это бот для доступа в закрытый канал по подписке на 30 дней.\n\n"
                     "Выберите действие ниже."
                 ),
                 text_en="Hello! Choose an action below.",
@@ -172,20 +172,20 @@ async def create_db():
             await message_repo.add(
                 slug="msg-choose-payment",
                 text_ru=(
-                    "Подписка на 90 дней.\n"
+                    "Подписка на 30 дней.\n"
                     "Стоимость: {price} ₸\n\n"
                     "Выберите способ оплаты:"
                 ),
-                text_en="90-day subscription.\nCost: {price} ₸\n\nChoose a payment method:",
+                text_en="30-day subscription.\nCost: {price} ₸\n\nChoose a payment method:",
             )
         else:
             msg_choose_payment.text_ru = (
-                "Подписка на 90 дней.\n"
+                "Подписка на 30 дней.\n"
                 "Стоимость: {price} ₸\n\n"
                 "Выберите способ оплаты:"
             )
             msg_choose_payment.text_en = (
-                "90-day subscription.\nCost: {price} ₸\n\nChoose a payment method:"
+                "30-day subscription.\nCost: {price} ₸\n\nChoose a payment method:"
             )
 
         if not await message_repo.get(slug="msg-support"):

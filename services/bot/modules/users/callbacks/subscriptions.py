@@ -25,19 +25,21 @@ async def _require_internal_api(mm: MessageManager) -> tuple[str, str]:
     return web_base_url, internal_token
 
 
+async def _show_payment_method_screen(mm: MessageManager) -> None:
+    """Показать экран выбора способа оплаты (Robokassa / TON / Назад)."""
+    price = await mm.config("TARIFF_AMOUNT_KZT")
+    price = str(price) if price is not None else "5000"
+    await mm.edit_message_text(
+        "msg-choose-payment",
+        msg_id=mm.message.message_id,
+        reply_markup=await _menu(mm, "menu-pay-method"),
+        price=price,
+    )
+
+
 async def buy_subscription_stub(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with MessageManager(update, context) as mm:
-        price = await mm.config("TARIFF_AMOUNT_KZT")
-        if price is None:
-            price = "5000"
-        else:
-            price = str(price)
-        await mm.edit_message_text(
-            "msg-choose-payment",
-            msg_id=mm.message.message_id,
-            reply_markup=await _menu(mm, "menu-pay-method"),
-            price=price,
-        )
+        await _show_payment_method_screen(mm)
         return
 
 
@@ -63,36 +65,24 @@ async def pay_robokassa(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 data = resp.json()
         except Exception as exc:
-            await mm.bot.edit_message_text(
-                chat_id=mm.chat_id,
-                message_id=mm.message.message_id,
-                text=f"Не удалось создать платёж. Попробуйте позже.\n\nОшибка: {exc}",
-                reply_markup=await _menu(mm, "menu-start"),
-            )
+            await mm.query.answer(f"Не удалось создать платёж. Попробуйте позже.\nОшибка: {exc}", show_alert=True)
+            await _show_payment_method_screen(mm)
             return
 
         if resp.status_code != 200:
             err = data.get("error") if isinstance(data, dict) else str(data)
-            await mm.bot.edit_message_text(
-                chat_id=mm.chat_id,
-                message_id=mm.message.message_id,
-                text=f"Не удалось создать платёж. Код {resp.status_code}.\n{err}",
-                reply_markup=await _menu(mm, "menu-start"),
-            )
+            await mm.query.answer(f"Не удалось создать платёж. Код {resp.status_code}.\n{err}", show_alert=True)
+            await _show_payment_method_screen(mm)
             return
 
         payment_url = data.get("payment_url")
         inv_id = data.get("inv_id")
         if not payment_url:
-            await mm.bot.edit_message_text(
-                chat_id=mm.chat_id,
-                message_id=mm.message.message_id,
-                text="Не удалось получить ссылку оплаты. Попробуйте позже.",
-                reply_markup=await _menu(mm, "menu-start"),
-            )
+            await mm.query.answer("Не удалось получить ссылку оплаты. Попробуйте позже.", show_alert=True)
+            await _show_payment_method_screen(mm)
             return
 
-        description = await mm.config("CRYPTOBOT_DESCRIPTION") or "Подписка на 90 дней"
+        description = await mm.config("CRYPTOBOT_DESCRIPTION") or "Подписка на 30 дней"
         price = await mm.config("TARIFF_AMOUNT_KZT")
         price_str = str(price) if price is not None else "5000"
         await mm.bot.edit_message_text(
@@ -131,33 +121,21 @@ async def pay_ton(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 data = resp.json()
         except Exception as exc:
-            await mm.bot.edit_message_text(
-                chat_id=mm.chat_id,
-                message_id=mm.message.message_id,
-                text=f"Не удалось создать счёт на оплату. Попробуйте позже.\n\nОшибка: {exc}",
-                reply_markup=await _menu(mm, "menu-start"),
-            )
+            await mm.query.answer(f"Не удалось создать счёт на оплату. Попробуйте позже.\nОшибка: {exc}", show_alert=True)
+            await _show_payment_method_screen(mm)
             return
 
         if resp.status_code != 200:
             err = data.get("error") if isinstance(data, dict) else str(data)
-            await mm.bot.edit_message_text(
-                chat_id=mm.chat_id,
-                message_id=mm.message.message_id,
-                text=f"Не удалось создать счёт на оплату. Код {resp.status_code}.\n{err}",
-                reply_markup=await _menu(mm, "menu-start"),
-            )
+            await mm.query.answer(f"Не удалось создать счёт на оплату. Код {resp.status_code}.\n{err}", show_alert=True)
+            await _show_payment_method_screen(mm)
             return
 
         pay_url = data.get("pay_url")
         invoice_id = data.get("invoice_id")
         if not pay_url:
-            await mm.bot.edit_message_text(
-                chat_id=mm.chat_id,
-                message_id=mm.message.message_id,
-                text="Не удалось получить ссылку оплаты. Попробуйте позже.",
-                reply_markup=await _menu(mm, "menu-start"),
-            )
+            await mm.query.answer("Не удалось получить ссылку оплаты. Попробуйте позже.", show_alert=True)
+            await _show_payment_method_screen(mm)
             return
 
         price = await mm.config("TARIFF_AMOUNT_KZT")

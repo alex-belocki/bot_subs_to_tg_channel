@@ -81,7 +81,7 @@ async def handle_event(msg: Msg):
                     return
 
                 ss = SubscriptionService(uow)
-                await ss.grant_90d(
+                await ss.grant_30d(
                     user_id=event.user_id,
                     channel_id=CHANNEL_ID,
                     start_at=event.paid_at,

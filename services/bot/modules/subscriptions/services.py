@@ -16,7 +16,7 @@ class SubscriptionService:
             user_id=user_id, channel_id=channel_id
         )
 
-    async def grant_90d(
+    async def grant_30d(
         self,
         user_id: int,
         channel_id: int | None = None,
@@ -28,7 +28,7 @@ class SubscriptionService:
 
         active = await self.get_active(user_id=user_id, channel_id=channel_id)
         if active:
-            # Если уже активна — просто продляем до max(active.end_at, now)+90
+            # Если уже активна — просто продляем до max(active.end_at, now)+SUBSCRIPTION_DAYS
             base = active.end_at if active.end_at > start_at else start_at
             new_end = base + dt.timedelta(days=SUBSCRIPTION_DAYS)
             active.end_at = new_end

@@ -44,7 +44,7 @@ async def admin_add(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("user_id должен быть числом.")
             return
 
-        sub_id = await mm.subscription_service.grant_90d(user_id=target_id, channel_id=CHANNEL_ID)
+        sub_id = await mm.subscription_service.grant_30d(user_id=target_id, channel_id=CHANNEL_ID)
         await mm.uow.commit()
 
         invite_link = None

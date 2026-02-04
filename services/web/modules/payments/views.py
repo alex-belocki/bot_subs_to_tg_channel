@@ -120,7 +120,7 @@ def robokassa_create():
     inv_id = payment.id
     description = _get_setting_value(
         "CRYPTOBOT_DESCRIPTION",
-        os.getenv("CRYPTOBOT_DESCRIPTION", "Подписка на 90 дней"),
+        os.getenv("CRYPTOBOT_DESCRIPTION", "Подписка на 30 дней"),
     )
     shp = {"Shp_user_id": str(user_id)}
     payment_url = build_payment_link(
@@ -243,7 +243,7 @@ def cryptobot_create():
     amount = _tariff_amount_kzt()
     description = _get_setting_value(
         "CRYPTOBOT_DESCRIPTION",
-        os.getenv("CRYPTOBOT_DESCRIPTION", "Подписка на 90 дней"),
+        os.getenv("CRYPTOBOT_DESCRIPTION", "Подписка на 30 дней"),
     )
 
     # 1) Создаём запись Payment в KZT.
