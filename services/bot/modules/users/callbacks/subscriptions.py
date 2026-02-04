@@ -1,7 +1,7 @@
 import datetime as dt
 import os
 
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 import httpx
 
@@ -160,21 +160,24 @@ async def pay_ton(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        description = await mm.config("CRYPTOBOT_DESCRIPTION") or "Подписка на 90 дней"
         price = await mm.config("TARIFF_AMOUNT_KZT")
         price_str = str(price) if price is not None else "5000"
+        lang = await mm.get_lang()
+        pay_btn_text = "Оплатить" if lang == "ru" else "Pay"
+        back_btn_text = "◀️ Назад" if lang == "ru" else "◀️ Back"
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton(pay_btn_text, url=pay_url)],
+            [InlineKeyboardButton(back_btn_text, callback_data="buy_subscription")],
+        ])
         await mm.bot.edit_message_text(
             chat_id=mm.chat_id,
             message_id=mm.message.message_id,
             text=(
                 f"Оплата {price_str} ₸ в TON (CryptoBot).\n\n"
-                f"Ссылка для оплаты {description}:\n\n"
-                f"{pay_url}\n\n"
                 f"Номер счёта: {invoice_id}\n\n"
                 "После оплаты бот пришлёт инвайт-ссылку автоматически."
             ),
-            disable_web_page_preview=True,
-            reply_markup=await _menu(mm, "menu-start"),
+            reply_markup=keyboard,
         )
 
 
