@@ -105,10 +105,11 @@ async def _publish_payment_succeeded_events(events: list[PaymentSucceededEvent])
 @broker.task(schedule=[{"cron": "*/2 * * * *"}])
 async def payments_reconcile_cryptobot_pending() -> None:
     """
-    Фолбэк на случай потери webhook:
+    Фолбэк на случай потери webhook и закрытие зависших платежей:
     - ищет pending платежи CryptoBot
     - проверяет статус invoice через Crypto Pay API (aiosend)
     - если PAID — переводит payment в success и публикует payment.succeeded
+    - если EXPIRED — переводит payment в canceled (закрываем зависшие)
     """
     token = (os.getenv("CRYPTOBOT_TOKEN") or "").strip()
     if not token:
@@ -159,78 +160,91 @@ async def payments_reconcile_cryptobot_pending() -> None:
         try:
             invoices = await cp.get_invoices(invoice_ids=invoice_ids)
         except Exception as exc:
-            logger.warning("cryptobot get_invoices failed: %s", exc)
+            logger.error("Reconcile error: %s", exc)
             return
 
         events: list[PaymentSucceededEvent] = []
+        has_changes = False
+
         for inv in invoices:
             p = by_invoice_id.get(int(inv.invoice_id))
             if not p:
                 continue
-            if str(inv.status) != "paid":
-                continue
 
-            # Фиатный инвойс (KZT): сверяем фиатную сумму.
-            if p.currency == "KZT":
-                inv_fiat = getattr(inv, "fiat", None) or ""
-                if str(inv_fiat) != "KZT":
+            # СЦЕНАРИЙ 1: ОПЛАТА ПРОШЛА (вебхук потерялся)
+            if str(inv.status) == "paid":
+                # Фиатный инвойс (KZT): сверяем фиатную сумму.
+                if p.currency == "KZT":
+                    inv_fiat = getattr(inv, "fiat", None) or ""
+                    if str(inv_fiat) != "KZT":
+                        continue
+                    try:
+                        incoming = Decimal(str(inv.amount)).quantize(Decimal("0.01"))
+                        expected = Decimal(str(p.amount)).quantize(Decimal("0.01"))
+                    except Exception:
+                        continue
+                    if incoming != expected:
+                        logger.warning(
+                            "cryptobot amount mismatch payment_id=%s invoice_id=%s expected=%s got=%s",
+                            p.id,
+                            inv.invoice_id,
+                            expected,
+                            incoming,
+                        )
+                        continue
+                else:
+                    # Старые инвойсы в TON.
+                    if str(getattr(inv, "asset", "") or "") != "TON":
+                        continue
+                    incoming_amount = Decimal(str(inv.amount)).quantize(Decimal("0.000000001"))
+                    expected_amount = Decimal(str(p.amount)).quantize(Decimal("0.000000001"))
+                    if incoming_amount != expected_amount:
+                        logger.warning(
+                            "cryptobot amount mismatch payment_id=%s invoice_id=%s expected=%s got=%s",
+                            p.id,
+                            inv.invoice_id,
+                            expected_amount,
+                            incoming_amount,
+                        )
+                        continue
+
+                # Идемпотентность: если уже успели обработать (например webhook), пропускаем.
+                if p.status == "success":
                     continue
-                try:
-                    incoming = Decimal(str(inv.amount)).quantize(Decimal("0.01"))
-                    expected = Decimal(str(p.amount)).quantize(Decimal("0.01"))
-                except Exception:
-                    continue
-                if incoming != expected:
-                    logger.warning(
-                        "cryptobot amount mismatch payment_id=%s invoice_id=%s expected=%s got=%s",
-                        p.id,
-                        inv.invoice_id,
-                        expected,
-                        incoming,
+
+                p.status = "success"
+                p.signature_verified = True  # verified via polling
+                p.paid_at = now
+                p.provider_invoice_id = p.provider_invoice_id or str(inv.invoice_id)
+                p.provider_payload = p.provider_payload or (inv.payload if inv.payload else None)
+                p.raw_callback = {
+                    "reconcile": True,
+                    "invoice": inv.model_dump(),
+                }
+                has_changes = True
+                events.append(
+                    PaymentSucceededEvent(
+                        payment_id=p.id,
+                        user_id=int(p.user_id),
+                        provider=p.provider,
+                        amount=str(p.amount),
+                        currency=p.currency,
+                        paid_at=now,
                     )
-                    continue
-            else:
-                # Старые инвойсы в TON.
-                if str(getattr(inv, "asset", "") or "") != "TON":
-                    continue
-                incoming_amount = Decimal(str(inv.amount)).quantize(Decimal("0.000000001"))
-                expected_amount = Decimal(str(p.amount)).quantize(Decimal("0.000000001"))
-                if incoming_amount != expected_amount:
-                    logger.warning(
-                        "cryptobot amount mismatch payment_id=%s invoice_id=%s expected=%s got=%s",
-                        p.id,
-                        inv.invoice_id,
-                        expected_amount,
-                        incoming_amount,
-                    )
-                    continue
-
-            # Идемпотентность: если уже успели обработать (например webhook), пропускаем.
-            if p.status == "success":
-                continue
-
-            p.status = "success"
-            p.signature_verified = True  # verified via polling
-            p.paid_at = now
-            p.provider_invoice_id = p.provider_invoice_id or str(inv.invoice_id)
-            p.provider_payload = p.provider_payload or (inv.payload if inv.payload else None)
-            p.raw_callback = {
-                "reconcile": True,
-                "invoice": inv.model_dump(),
-            }
-
-            events.append(
-                PaymentSucceededEvent(
-                    payment_id=p.id,
-                    user_id=int(p.user_id),
-                    provider=p.provider,
-                    amount=str(p.amount),
-                    currency=p.currency,
-                    paid_at=now,
                 )
-            )
 
-        if not events:
+            # СЦЕНАРИЙ 2: ИНВОЙС ИСТЕК (пользователь не оплатил)
+            elif str(inv.status) == "expired":
+                if p.status == "pending":
+                    logger.info(
+                        "Payment %s expired in CryptoBot. Canceling local payment.",
+                        p.id,
+                    )
+                    p.status = "canceled"
+                    p.raw_callback = {"reconcile": True, "status": "expired"}
+                    has_changes = True
+
+        if not has_changes:
             return
 
         await uow.commit()

@@ -3,11 +3,14 @@ import datetime as dt
 import hashlib
 import hmac
 import json
+import logging
 import os
 from decimal import Decimal
 from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
+
+logger = logging.getLogger(__name__)
 
 from common.models.models import Settings
 from common.models.payments_models import Payment
@@ -314,6 +317,7 @@ def cryptobot_webhook():
     raw_body = request.get_data(cache=True)  # bytes
     signature = (request.headers.get("crypto-pay-api-signature") or "").strip()
     if not _verify_cryptobot_signature(raw_body, signature, token):
+        logger.warning("CryptoBot webhook: invalid signature (possible forgery attempt)")
         return jsonify({"error": "invalid_signature"}), 401
 
     try:
@@ -406,6 +410,7 @@ def cryptobot_webhook():
             return jsonify({"error": "amount_mismatch"}), 400
 
     # Доп. верификация через API: подтягиваем invoice и убеждаемся, что он реально PAID.
+    # Если API CryptoBot недоступен, но подпись вебхука верна — засчитываем оплату (fail-safe).
     try:
         from aiosend import CryptoPay
 
@@ -413,12 +418,13 @@ def cryptobot_webhook():
         # Метод get_invoices синхронный.
         invoices = cp.get_invoices(invoice_ids=[invoice_id_int])
         inv = invoices[0] if invoices else None
-        if not inv or str(inv.status) != "paid":
-            return jsonify({"error": "invoice_not_paid"}), 409
+        if inv and str(inv.status) != "paid":
+            return jsonify({"error": "invoice_not_paid_api_check"}), 409
     except Exception as exc:
-        # Не блокируем оплату из-за временного сбоя в API, т.к. подпись уже проверили.
-        # Это fallback: reconcile в Taskiq всё равно сможет перепроверить позже.
-        _ = exc
+        logger.warning(
+            "CryptoBot API check failed: %s, trusting webhook signature.",
+            exc,
+        )
 
     now = dt.datetime.now(dt.timezone.utc)
     payment.status = "success"
@@ -428,7 +434,7 @@ def cryptobot_webhook():
     payment.provider_payload = payment.provider_payload or (
         invoice_payload if isinstance(invoice_payload, str) else None
     )
-    payment.raw_callback = {"update": data, "signature": signature}
+    payment.raw_callback = {"update": data}
     db.session.commit()
 
     event = PaymentSucceededEvent(
@@ -439,6 +445,14 @@ def cryptobot_webhook():
         currency=payment.currency,
         paid_at=now,
     )
-    asyncio.run(publish_payment_succeeded_event(event))
+    try:
+        asyncio.run(publish_payment_succeeded_event(event))
+    except Exception as exc:
+        logger.error(
+            "CryptoBot webhook: payment saved but NATS publish failed (payment_id=%s): %s",
+            payment.id,
+            exc,
+        )
+        # Отвечаем 200, чтобы CryptoBot не ретраил вебхук; reconcile подхватит при необходимости.
 
     return jsonify({"ok": True}), 200
