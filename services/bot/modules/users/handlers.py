@@ -27,10 +27,11 @@ class UserHandler(BaseHandler):
             pay_robokassa,
             pattern=await self.pattern("btn-pay-robokassa"),
         )
-        yield CallbackQueryHandler(
-            pay_ton,
-            pattern=await self.pattern("btn-pay-ton"),
-        )
+        # TODO: вернуть когда CryptoBot будет готов
+        # yield CallbackQueryHandler(
+        #     pay_ton,
+        #     pattern=await self.pattern("btn-pay-ton"),
+        # )
         yield CallbackQueryHandler(
             my_subscription,
             pattern=await self.pattern('btn-my-subscription'),
