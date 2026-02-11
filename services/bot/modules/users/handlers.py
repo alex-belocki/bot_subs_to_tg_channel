@@ -37,10 +37,6 @@ class UserHandler(BaseHandler):
             pattern=await self.pattern('btn-my-subscription'),
         )
         yield CallbackQueryHandler(
-            support,
-            pattern=await self.pattern('btn-support'),
-        )
-        yield CallbackQueryHandler(
             get_invite,
             pattern=await self.pattern('btn-get-invite'),
         )

@@ -159,15 +159,6 @@ async def pay_ton(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
-async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    async with MessageManager(update, context) as mm:
-        await mm.edit_message_text(
-            "msg-support",
-            msg_id=mm.message.message_id,
-            reply_markup=await _menu(mm, "menu-support"),
-        )
-
-
 async def my_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
     async with MessageManager(update, context) as mm:
         sub = await mm.subscription_service.get_active(

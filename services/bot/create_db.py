@@ -28,6 +28,15 @@ async def create_db():
             slug = data["slug"]
             btn = await button_repo.get(slug=slug)
             if btn:
+                for key, value in data.items():
+                    if key != "slug" and hasattr(btn, key):
+                        setattr(btn, key, value)
+                # Обнулить поля, которых нет в data, но которые могут конфликтовать
+                if "callback_data" not in data:
+                    btn.callback_data = None
+                if "inline_url" not in data:
+                    btn.inline_url = None
+                await session.flush()
                 return btn
             btn_id = await button_repo.add(**data)
             return await button_repo.get(id=btn_id)
@@ -80,7 +89,7 @@ async def create_db():
             slug="btn-support",
             text_ru="Поддержка",
             text_en="Support",
-            callback_data="support",
+            inline_url="https://t.me/Macka_support",
         )
         btn_get_invite = await ensure_button(
             slug="btn-get-invite",
