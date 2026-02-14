@@ -88,8 +88,11 @@ def is_result_signature_valid(
     password2: str,
     signature_value: str,
     shp: dict[str, Any],
+    out_sum_str: str | None = None,
 ) -> bool:
-    out_sum_str = str(normalize_amount_2dp(out_sum))
+    if out_sum_str is None:
+        out_sum_str = str(normalize_amount_2dp(out_sum))
+
     base = build_signature_base_with_shp(
         out_sum_str,
         str(inv_id),

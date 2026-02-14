@@ -206,6 +206,7 @@ def robokassa_result():
         password2=password2,
         signature_value=signature,
         shp=shp,
+        out_sum_str=out_sum_raw,
     ):
         logger.warning("Robokassa invalid signature. Form: %s", dict(form))
         return jsonify({"error": "invalid_signature"}), 400
