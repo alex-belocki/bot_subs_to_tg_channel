@@ -120,6 +120,13 @@ def robokassa_create():
     db.session.add(payment)
     db.session.commit()
 
+    logger.info(
+        "Robokassa payment created in DB: inv_id=%s, user_id=%s, amount=%s",
+        payment.id,
+        user_id,
+        amount,
+    )
+
     inv_id = payment.id
     description = _get_setting_value(
         "CRYPTOBOT_DESCRIPTION",
@@ -135,6 +142,8 @@ def robokassa_create():
         shp=shp,
     )
 
+    logger.info("Robokassa payment link generated: inv_id=%s, url=%s", inv_id, payment_url)
+
     return jsonify({"inv_id": inv_id, "payment_url": payment_url})
 
 
@@ -148,6 +157,7 @@ def robokassa_result():
 
     # Robokassa шлёт параметры как form (обычно POST).
     form = request.form or {}
+    logger.info("Robokassa callback received: %s", dict(form))
 
     out_sum_raw = form.get("OutSum") or form.get("out_sum") or form.get("OUTSUM")
     inv_id_raw = form.get("InvId") or form.get("InvID") or form.get("inv_id")
@@ -159,6 +169,7 @@ def robokassa_result():
     )
 
     if not out_sum_raw or not inv_id_raw or not signature:
+        logger.warning("Robokassa callback missing params: %s", dict(form))
         return jsonify({"error": "missing_params"}), 400
 
     try:
@@ -181,6 +192,12 @@ def robokassa_result():
     expected_amount = normalize_amount_2dp(_tariff_amount_kzt())
     incoming_amount = normalize_amount_2dp(out_sum)
     if incoming_amount != expected_amount:
+        logger.warning(
+            "Robokassa amount mismatch: expected=%s, got=%s. Form: %s",
+            expected_amount,
+            incoming_amount,
+            dict(form),
+        )
         return jsonify({"error": "amount_mismatch"}), 400
 
     if not is_result_signature_valid(
@@ -190,19 +207,27 @@ def robokassa_result():
         signature_value=signature,
         shp=shp,
     ):
+        logger.warning("Robokassa invalid signature. Form: %s", dict(form))
         return jsonify({"error": "invalid_signature"}), 400
 
     payment: Payment | None = db.session.get(Payment, inv_id)
     if not payment:
+        logger.warning("Robokassa payment not found: inv_id=%s", inv_id)
         return jsonify({"error": "payment_not_found"}), 404
 
     # Идемпотентность: если уже success — просто OK{InvId}.
     if payment.status == "success":
+        logger.info("Robokassa payment already processed: inv_id=%s", inv_id)
         return Response(f"OK{inv_id}", mimetype="text/plain")
 
     # Доп. защита: сверяем user_id из Shp_user_id (если есть).
     shp_user_id = shp.get("Shp_user_id") or shp.get("shp_user_id")
     if shp_user_id is not None and str(payment.user_id) != str(shp_user_id):
+        logger.warning(
+            "Robokassa user mismatch: payment.user_id=%s, shp_user_id=%s",
+            payment.user_id,
+            shp_user_id,
+        )
         return jsonify({"error": "user_mismatch"}), 400
 
     now = dt.datetime.now(dt.timezone.utc)
@@ -221,6 +246,8 @@ def robokassa_result():
         paid_at=now,
     )
     asyncio.run(publish_payment_succeeded_event(event))
+
+    logger.info("Robokassa payment successful: inv_id=%s", inv_id)
 
     return Response(f"OK{inv_id}", mimetype="text/plain")
 
