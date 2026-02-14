@@ -6,7 +6,7 @@ import logging
 
 import datetime as dt
 from decimal import Decimal
-from telegram import Bot
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import TelegramError
 
 from core.constants.config import CHANNEL_ID, TOKEN
@@ -75,6 +75,22 @@ async def subscriptions_expire_and_kick() -> None:
                     )
 
             sub.status = "expired"
+
+            try:
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("Купить подписку 30 дней", callback_data="buy_subscription")]
+                ])
+                await bot.send_message(
+                    chat_id=sub.user_id,
+                    text="У вас закончилась подписка. Чтобы продлить её, оплатите подписку снова.",
+                    reply_markup=keyboard
+                )
+            except TelegramError as exc:
+                logger.warning(
+                    "Failed to send expiration message to user_id=%s: %s",
+                    sub.user_id,
+                    exc,
+                )
 
         await uow.commit()
 
